@@ -1,8 +1,17 @@
-import os, pickle
+import os
+import pickle
+import random
 
+import numpy as np
+import tensorflow as tf
 from tensorflow.keras.applications import VGG16
 from tensorflow.keras.preprocessing.image import load_img, img_to_array
-import numpy as np
+
+from model.simnet import simnet
+
+DATASET_SIZE = 70000
+RANDOM_SEED = 2137
+BATCH_SIZE = 32
 
 
 class Dataset:
@@ -127,15 +136,54 @@ class ImagePreparer:
             with f:
                 return pickle.load(f)
 
+
 # #test = ImagePreparer()
 # #test.getDataset(with_save=True)
 #
-# test = ImagePreparer()
-# ds = test.load_data_from_file()
-#
-# print(ds.names)
-#
-# print(len(ds.queryImages))
-#
-# for a in ds.queryImages:
-#     print(len(a))
+
+def make_tf_dataset(dataset, test_set_size=0.2):
+    random.seed(RANDOM_SEED)
+    sequence = dataset.sequence1
+    index_pairs = []
+    for i in range(len(sequence)):
+        for j in range(i, len(sequence)):
+            index_pairs.append((i, j))
+
+    samples_per_pair = DATASET_SIZE // len(index_pairs)
+    examples = []
+    labels = []
+
+    for i, j in index_pairs:
+        for _ in range(samples_per_pair):
+            labels.append(1 if i == j else 0)
+            sample = np.zeros((1, 512, 2))
+            first = random.choice(sequence[i])
+            second = random.choice(sequence[j])
+            sample[0, :, 0] = first
+            sample[0, :, 1] = second
+            examples.append(sample)
+
+    examples = np.asarray(examples)
+    labels = np.asarray(labels)
+
+    split_index = round(test_set_size * examples.shape[0])
+    train_examples = examples[:split_index]
+    train_labels = labels[:split_index]
+    test_examples = examples[split_index:]
+    test_labels = labels[split_index:]
+
+    train_dataset = tf.data.Dataset.from_tensor_slices((train_examples, train_labels))
+    train_dataset = train_dataset.batch(BATCH_SIZE)
+    test_dataset = tf.data.Dataset.from_tensor_slices((test_examples, test_labels))
+    test_dataset = test_dataset.batch(BATCH_SIZE)
+
+    return train_dataset, test_dataset
+
+
+if __name__ == '__main__':
+    test = ImagePreparer()
+    ds = test.load_data_from_file()
+
+    train_dataset, test_dataset = make_tf_dataset(ds)
+    net = simnet()
+    net.fit(train_dataset, epochs=10)
