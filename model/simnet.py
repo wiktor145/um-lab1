@@ -2,6 +2,8 @@ import keras.backend as K
 import tensorflow.keras.layers as layers
 import tensorflow.keras.models as models
 from tensorflow_addons.optimizers import SGDW
+from tensorflow.python.framework.ops import disable_eager_execution
+disable_eager_execution()
 
 INPUT_SHAPE = (1, 512, 2)
 DELTA = 0.6
