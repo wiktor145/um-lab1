@@ -141,7 +141,7 @@ class ImagePreparer:
 # #test.getDataset(with_save=True)
 #
 
-def make_tf_dataset(dataset, test_set_size=0.2):
+def make_tf_dataset(dataset, test_set_size=0.8):
     random.seed(RANDOM_SEED)
     sequence = dataset.sequence1
     index_pairs = []
