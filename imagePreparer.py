@@ -11,7 +11,7 @@ from model.simnet import simnet
 
 DATASET_SIZE = 70000
 RANDOM_SEED = 2137
-BATCH_SIZE = 32
+BATCH_SIZE = 128
 
 
 class Dataset:
@@ -166,24 +166,63 @@ def make_tf_dataset(dataset, test_set_size=0.8):
     examples = np.asarray(examples)
     labels = np.asarray(labels)
 
-    split_index = round(test_set_size * examples.shape[0])
-    train_examples = examples[:split_index]
-    train_labels = labels[:split_index]
-    test_examples = examples[split_index:]
-    test_labels = labels[split_index:]
+    # split_index = round(test_set_size * examples.shape[0])
+    train_examples = examples
+    train_labels = labels
+    # test_examples = examples[split_index:]
+    # test_labels = labels[split_index:]
 
     train_dataset = tf.data.Dataset.from_tensor_slices((train_examples, train_labels))
     train_dataset = train_dataset.batch(BATCH_SIZE)
-    test_dataset = tf.data.Dataset.from_tensor_slices((test_examples, test_labels))
-    test_dataset = test_dataset.batch(BATCH_SIZE)
+    # test_dataset = tf.data.Dataset.from_tensor_slices((test_examples, test_labels))
+    # test_dataset = test_dataset.batch(BATCH_SIZE)
 
-    return train_dataset, test_dataset
+    return train_dataset
+
+
+def test_net(net, ds):
+    query_images = ds.queryImages
+    seq2 = ds.sequence2
+
+    correct_guesses = [0 for _ in seq2]
+
+    for a, room in enumerate(seq2):
+        #print("room ", a)
+        for b, image in enumerate(room):
+            #if b % 100 == 0:
+                #print("image ", b)
+            current_guesses = [0 for _ in seq2]
+
+            for i, query_room in enumerate(query_images):
+                for query in query_room:
+                    # print(i)
+                    # print(image[0])
+                    sample = np.zeros((1, 512, 2))
+                    sample[0, :, 0] = image[0]
+                    sample[0, :, 1] = query
+                    guess = net.predict(np.expand_dims(sample, axis=0))[0][0][0][0]
+                    # print(guess[0][0][0])
+                    current_guesses[i] = guess if guess > current_guesses[i] else current_guesses[i]
+
+            guess = np.argmax(current_guesses)
+            if a == guess:
+                correct_guesses[a] += 1
+
+    for a in range(len(seq2)):
+        correct_guesses[a] /= len(seq2[a])
+
+    print("Precisions:")
+    for i, a in enumerate(correct_guesses):
+        print("room ", i, correct_guesses[i])
+    print("Mean average precision:")
+    print(np.average(correct_guesses))
 
 
 if __name__ == '__main__':
     test = ImagePreparer()
     ds = test.load_data_from_file()
 
-    train_dataset, test_dataset = make_tf_dataset(ds)
+    train_dataset = make_tf_dataset(ds).shuffle(50)
     net = simnet()
-    net.fit(train_dataset, epochs=10)
+    net.fit(train_dataset, epochs=10, shuffle=True)
+    test_net(net, ds)
