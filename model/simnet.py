@@ -1,7 +1,7 @@
 import keras.backend as K
 import tensorflow.keras.layers as layers
 import tensorflow.keras.models as models
-from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.optimizers import Adam, SGD
 from tensorflow.python.framework.ops import disable_eager_execution
 
 disable_eager_execution()
@@ -41,7 +41,7 @@ def simnet():
         sim = cosine_similarity(x1, x2)
         return abs(y_pred - l * (sim + DELTA) - (1 - l) * (sim - DELTA))
 
-    #optimizer = Adam(lr=0.001)
+    optimizer = SGD(learning_rate=0.001, momentum=0.9)
 
     model.compile(optimizer="adam", loss="binary_crossentropy")
     #model.summary()

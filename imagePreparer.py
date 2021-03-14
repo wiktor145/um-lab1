@@ -9,7 +9,7 @@ from tensorflow.keras.preprocessing.image import load_img, img_to_array
 
 from model.simnet import simnet
 
-DATASET_SIZE = 70000
+DATASET_SIZE = 30000
 RANDOM_SEED = 2137
 BATCH_SIZE = 128
 
@@ -224,5 +224,5 @@ if __name__ == '__main__':
 
     train_dataset = make_tf_dataset(ds).shuffle(50)
     net = simnet()
-    net.fit(train_dataset, epochs=10, shuffle=True)
+    net.fit(train_dataset, epochs=20, shuffle=True)
     test_net(net, ds)
