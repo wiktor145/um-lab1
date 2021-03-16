@@ -187,10 +187,10 @@ def test_net(net, ds):
     correct_guesses = [0 for _ in seq2]
 
     for a, room in enumerate(seq2):
-        #print("room ", a)
+        # print("room ", a)
         for b, image in enumerate(room):
-            #if b % 100 == 0:
-                #print("image ", b)
+            # if b % 100 == 0:
+            # print("image ", b)
             current_guesses = [0 for _ in seq2]
 
             for i, query_room in enumerate(query_images):
@@ -221,6 +221,10 @@ def test_net(net, ds):
 if __name__ == '__main__':
     test = ImagePreparer()
     ds = test.load_data_from_file()
+    if not ds:
+        print("Was not able to load dataset from file dataset.ds")
+        print("Trying to process images...")
+        ds = test.getDataset(with_save=True)
 
     train_dataset = make_tf_dataset(ds).shuffle(50)
     net = simnet()
