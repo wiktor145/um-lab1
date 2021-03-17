@@ -10,7 +10,7 @@ from tensorflow.keras.preprocessing.image import load_img, img_to_array
 from model.simnet import simnet
 
 DATASET_SIZE = 30000
-RANDOM_SEED = 2137
+RANDOM_SEED = 2000
 BATCH_SIZE = 128
 
 
