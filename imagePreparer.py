@@ -1,6 +1,9 @@
 import os
 import pickle
 import random
+import matplotlib.pyplot as plt
+import seaborn as sn
+import pandas as pd
 
 import numpy as np
 import tensorflow as tf
@@ -141,7 +144,7 @@ class ImagePreparer:
 # #test.getDataset(with_save=True)
 #
 
-def make_tf_dataset(dataset, test_set_size=0.8):
+def make_tf_dataset(dataset, test_set_size=0.9):
     random.seed(RANDOM_SEED)
     sequence = dataset.sequence1
     index_pairs = []
@@ -166,18 +169,18 @@ def make_tf_dataset(dataset, test_set_size=0.8):
     examples = np.asarray(examples)
     labels = np.asarray(labels)
 
-    # split_index = round(test_set_size * examples.shape[0])
+    split_index = round(test_set_size * examples.shape[0])
     train_examples = examples
     train_labels = labels
-    # test_examples = examples[split_index:]
-    # test_labels = labels[split_index:]
+    valid_examples = examples[split_index:]
+    valid_labels = labels[split_index:]
 
     train_dataset = tf.data.Dataset.from_tensor_slices((train_examples, train_labels))
     train_dataset = train_dataset.batch(BATCH_SIZE)
-    # test_dataset = tf.data.Dataset.from_tensor_slices((test_examples, test_labels))
-    # test_dataset = test_dataset.batch(BATCH_SIZE)
+    valid_dataset = tf.data.Dataset.from_tensor_slices((valid_examples, valid_labels))
+    valid_dataset = valid_dataset.batch(BATCH_SIZE)
 
-    return train_dataset
+    return train_dataset, valid_dataset
 
 
 def test_net(net, ds):
@@ -185,6 +188,8 @@ def test_net(net, ds):
     seq2 = ds.sequence2
 
     correct_guesses = [0 for _ in seq2]
+
+    confusion_matrix = [[0 for _ in seq2] for _ in seq2]
 
     for a, room in enumerate(seq2):
         # print("room ", a)
@@ -205,17 +210,25 @@ def test_net(net, ds):
                     current_guesses[i] = guess if guess > current_guesses[i] else current_guesses[i]
 
             guess = np.argmax(current_guesses)
+            confusion_matrix[a][guess] += 1
             if a == guess:
                 correct_guesses[a] += 1
 
     for a in range(len(seq2)):
         correct_guesses[a] /= len(seq2[a])
+        for b in range(len(seq2)):
+            confusion_matrix[a][b] /= len(seq2[a])
 
     print("Precisions:")
     for i, a in enumerate(correct_guesses):
         print("room ", i, correct_guesses[i])
     print("Mean average precision:")
     print(np.average(correct_guesses))
+
+    df_cm = pd.DataFrame(confusion_matrix, range(9), range(9))
+    plt.figure(figsize=(10, 7))
+    sn.heatmap(df_cm, annot=True)
+    plt.show()
 
 
 if __name__ == '__main__':
@@ -226,7 +239,13 @@ if __name__ == '__main__':
         print("Trying to process images...")
         ds = test.getDataset(with_save=True)
 
-    train_dataset = make_tf_dataset(ds).shuffle(50)
+    train_dataset, valid_dtaset = make_tf_dataset(ds)
     net = simnet()
-    net.fit(train_dataset, epochs=20, shuffle=True)
+    history = net.fit(train_dataset.shuffle(50), epochs=20, shuffle=True, validation_data=valid_dtaset)
+
+    plt.plot(history.history["loss"], label="loss")
+    plt.plot(history.history["val_loss"], label="val_loss")
+    plt.legend()
+    plt.show()
+
     test_net(net, ds)
